@@ -6,6 +6,7 @@ import java.util.Map;
 /**
  * @author 张滨
  * @time 2022/07/31 20:44
+ * 提示信息类。该类对象会被打包发送给前端，前端进行解析从而得知请求是否成功。
  */
 public class Msg {
 
