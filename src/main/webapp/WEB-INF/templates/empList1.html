@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>员工列表</title>
+    <!-- 引入JQuery -->
+    <script src="https://cdn.staticfile.org/jquery/2.1.1/jquery.min.js"></script>
+    <!-- 引入Vue、axios相关 -->
+    <script type="text/javascript" th:src="@{/static/js/vue.js}"></script>
+    <script type="text/javascript" th:src="@{/static/js/axios.min.js}"></script>
+    <!-- 引入bootstrap相关 -->
+    <script type="text/javascript" th:src="@{/static/bootstrap/js/bootstrap.min.js}"></script>
+    <link th:href="@{/static/bootstrap/css/bootstrap.min.css}" rel="stylesheet">
+</head>
+<body>
+<div class="container" id="app">
+    <!-- 标题显示 -->
+    <div class="row">
+        <div class="col-xs-12">
+            <h1>员工列表展示</h1>
+        </div>
+    </div>
+
+    <!-- 添加删除按钮 -->
+    <div class="row">
+        <div class="col-md-3 col-md-offset-9">
+            <button class="btn btn-primary" id="add_emp_btn" @click="addModal()">添加</button>
+            <button class="btn btn-danger" id="delete_batch_btn" @click="deleteEmpBatch()">删除</button>
+        </div>
+    </div>
+
+    <!-- 详细员工信息 -->
+    <div class="row">
+        <div class="col-md-12">
+            <table class="table table-hover">
+                <tr>
+                    <th><input type="checkbox" id="check_all" @click="checkAll()"></th>
+                    <th>id</th>
+                    <th>empName</th>
+                    <th>age</th>
+                    <th>sex</th>
+                    <th>email</th>
+                    <th>deptName</th>
+                    <th>操作</th>
+                </tr>
+                <tr v-for="emp in pageInfo.list">
+                    <td><input type="checkbox" class="check_item" @click="checkItem(emp.empId)"></td>
+                    <td>{{emp.empId}}</td>
+                    <td>{{emp.empName}}</td>
+                    <td>{{emp.age}}</td>
+                    <td>{{emp.sex}}</td>
+                    <td>{{emp.email}}</td>
+                    <td v-if="emp.deptId != null">{{emp.dept.deptName}}</td>
+                    <td v-else="emp.deptId == null">暂无</td>
+                    <td>
+                        <button class="btn btn-primary btn-sm" @click="editModal(emp.empId)">
+                            <span class="glyphicon glyphicon-pencil" aria-hidden="true"></span>
+                            编辑
+                        </button>
+                        <button class="btn btn-danger btn-sm" @click="deleteEmp(emp.empName)">
+                            <span class="glyphicon glyphicon-trash" aria-hidden="true"></span>
+                            删除
+                        </button>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <!-- 分页信息 -->
+    <div class="row">
+        <!-- 分页文字信息 -->
+        <div class="col-md-6">当前 {{pageInfo.pageNum}} 页,总 {{pageInfo.pages}} 页,总 {{pageInfo.total}} 条记录</div>
+        <!-- 分页导航栏信息 -->
+        <div class="col-md-6">
+            <nav aria-label="Page navigation">
+                <ul class="pagination">
+                    <!-- 首页 -->
+                    <li v-if="pageInfo.pageNum != 1">
+                        <a @click.prevent="getPageInfo(1)" style="cursor:pointer">首页</a>
+                    </li>
+                    <!-- 如果当前页为首页，则首页按钮不允许点击 -->
+                    <li v-else="pageInfo.pageNum == 1" class="disabled"><a>首页</a></li>
+
+                    <!-- 上一页 -->
+                    <li v-if="pageInfo.hasPreviousPage">
+                        <a @click.prevent="getPageInfo(pageInfo.prePage)" aria-label="Previous" style="cursor:pointer">
+                            <span aria-hidden="true">&laquo;</span>
+                        </a>
+                    </li>
+                    <!-- 判断是否存在上一页，不存在则不允许点击上一页按钮 -->
+                    <li v-else="!pageInfo.hasPreviousPage" class="disabled">
+                        <a aria-label="Previous">
+                            <span aria-hidden="true">&laquo;</span>
+                        </a>
+                    </li>
+
+                    <!-- 导航栏页码 -->
+                    <li v-for="num in pageInfo.navigatepageNums" v-if="pageInfo.pageNum!=num">
+                        <a @click.prevent="getPageInfo(num)" style="cursor:pointer">{{num}}</a>
+                    </li>
+                    <!-- 给导航栏 添加当前页样式为蓝色 -->
+                    <li v-else="pageInfo.pageNum==num" class="active">
+                        <a @click.prevent="getPageInfo(num)" style="cursor:pointer">{{num}}</a>
+                    </li>
+
+                    <!-- 下一页 -->
+                    <li v-if="pageInfo.hasNextPage">
+                        <a @click.prevent="getPageInfo(pageInfo.nextPage)" aria-label="Next" style="cursor:pointer">
+                            <span aria-hidden="true">&raquo;</span>
+                        </a>
+                    </li>
+                    <!-- 判断是否存在下一页，不存在则不允许点击下一页按钮 -->
+                    <li v-else="!pageInfo.hasNextPage" class="disabled">
+                        <a aria-label="Next">
+                            <span aria-hidden="true">&raquo;</span>
+                        </a>
+                    </li>
+
+                    <!-- 尾页 -->
+                    <li v-if="pageInfo.pageNum != pageInfo.pages">
+                        <a @click.prevent="getPageInfo(pageInfo.pages)" style="cursor:pointer">尾页</a>
+                    </li>
+                    <!-- 如果当前页为尾页，则尾页按钮不允许点击 -->
+                    <li v-else="pageInfo.pageNum == pageInfo.pages" class="disabled"><a>尾页</a></li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+
+    <!-- 添加员工的模态框 -->
+    <div class="modal fade" id="addEmpModal" tabindex="-1" role="dialog" aria-labelledby="addModalLabel">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span
+                            aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title" id="addModalLabel">添加员工</h4>
+                </div>
+                <div class="modal-body">
+                    <form class="form-horizontal">
+                        <div class="form-group">
+                            <label for="inputEmpName" class="col-sm-2 control-label">empName</label>
+                            <div class="col-sm-10">
+                                <input type="text" v-model="emp.empName" class="form-control"
+                                       id="inputEmpName" placeholder="empName">
+                                <span class="help-block"></span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="inputAge" class="col-sm-2 control-label">Age</label>
+                            <div class="col-sm-10">
+                                <input type="text" v-model="emp.age" class="form-control" id="inputAge"
+                                       placeholder="age">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">Gender</label>
+                            <div class="col-sm-10">
+                                <label for="inputGenderAdd1" class="radio-inline">
+                                    <input type="radio" v-model="emp.sex" name="gender" id="inputGenderAdd1" value="男">
+                                    男
+                                </label>
+                                <label for="inputGenderAdd2" class="radio-inline">
+                                    <input type="radio" v-model="emp.sex" name="gender" id="inputGenderAdd2" value="女">
+                                    女
+                                </label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="inputEmail" class="col-sm-2 control-label">Email</label>
+                            <div class="col-sm-10">
+                                <input type="text" v-model="emp.email" class="form-control"
+                                       id="inputEmail" placeholder="email@126.com">
+                                <span class="help-block"></span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">deptName</label>
+                            <div class="col-sm-4">
+                                <select class="form-control" v-model="emp.deptId">
+                                    <option v-for="dept in depts" :value="dept.deptId">{{dept.deptName}}</option>
+                                </select>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">关闭</button>
+                    <button type="button" class="btn btn-primary" @click.prevent="saveEmp()">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 编辑员工的模态框 -->
+    <div class="modal fade" id="editEmpModal" tabindex="-1" role="dialog" aria-labelledby="editModalLabel">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span
+                            aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title" id="editModalLabel">修改员工</h4>
+                </div>
+                <div class="modal-body">
+                    <form class="form-horizontal">
+                        <div class="form-group">
+                            <label for="inputEmpNameEdit" class="col-sm-2 control-label">empName</label>
+                            <div class="col-sm-10">
+                                <input type="text" v-model="editEmp.empName" class="form-control"
+                                       id="inputEmpNameEdit" placeholder="empName" readonly>
+                                <!-- 前端校验显示的结果 -->
+                                <span class="help-block"></span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="inputAgeEdit" class="col-sm-2 control-label">Age</label>
+                            <div class="col-sm-10">
+                                <input type="text" v-model="editEmp.age" class="form-control" id="inputAgeEdit"
+                                       placeholder="age">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">Gender</label>
+                            <div class="col-sm-10">
+                                <label class="radio-inline">
+                                    <input type="radio" v-model="editEmp.sex" name="gender" id="inputGenderEdit1"
+                                           value="男"> 男
+                                </label>
+                                <label class="radio-inline">
+                                    <input type="radio" v-model="editEmp.sex" name="gender" id="inputGenderEdit2"
+                                           value="女"> 女
+                                </label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="inputEmail" class="col-sm-2 control-label">Email</label>
+                            <div class="col-sm-10">
+                                <input type="text" v-model="editEmp.email" class="form-control"
+                                       id="inputEmailEdit" placeholder="email@126.com">
+                                <!-- 前端校验显示的结果 -->
+                                <span class="help-block"></span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">deptName</label>
+                            <div class="col-sm-4">
+                                <select class="form-control" v-model="editEmp.deptId">
+                                    <!--<option :value="editEmp.deptId">{{editDept.deptName}}</option>-->
+                                    <!-- 将获取到的部门信息进行双向绑定 -->
+                                    <option v-for="dept in depts" :value="dept.deptId"
+                                            v-if="editDept.deptName != dept.deptName">
+                                        {{dept.deptName}}
+                                    </option>
+                                    <!-- 将当前正在编辑的用户的部门名设置为默认显示 -->
+                                    <option :value="dept.deptId" v-else="editDept.deptName == dept.deptName"
+                                            selected="selected">
+                                        {{dept.deptName}}
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">关闭</button>
+                    <button type="button" class="btn btn-primary" @click.prevent="updateEmp()">更新</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="text/javascript">
+    // 前后端分离思路：
+    // 用户对目标资源地址发送请求，服务器接收到请求，不直接返回由后端处理之后（将处理后的数据渲染到视图上然后返回）所渲染的视图
+    // 而是，将处理后的数据（json数据）返回，由前端人员对静态视图进行渲染。
+
+    // 当页面加载完成之后，发送ajax请求，获取到后端响应数据
+    window.onload = function () {
+        var vue = new Vue({
+            el: "#app",
+            data: {
+                // 保存分页查询的数据
+                pageInfo: {},
+                // 保存所有部门数据
+                depts: {},
+                // 用于添加用户打包发送给后端
+                emp: {
+                    empId: null,
+                    empName: null,
+                    age: null,
+                    sex: null,
+                    email: null,
+                    deptId: null
+                },
+                // 获取正在编辑的用户的回显信息（emp用户信息以及dept部门信息）
+                editEmp: {},
+                editDept: {},
+                // 批量删除的员工id
+                batchDeleteId: []
+            },
+            methods: {
+                // 获取首页员工信息，并保存在vue中（pageInfo）
+                getAllInfo: function () {
+                    axios({
+                        methods: "GET",
+                        url: "[[@{/emp/1}]]",
+                    }).then(function (res) {
+                        // console.log(res.data.map.pageInfo);
+                        vue.pageInfo = res.data.map.pageInfo;
+                    })
+                },
+                // 获取分页员工信息，并保存在vue中（pageInfo）
+                getPageInfo: function (page) {
+                    axios({
+                        methods: "GET",
+                        url: "[[@{/emp/}]]" + page
+                    }).then(function (res) {
+                        // console.log(res.data.map.pageInfo);
+                        // 将选中的复选框取消勾选
+                        $("#check_all").prop("checked", false);
+                        $(".check_item").prop("checked", false);
+                        vue.pageInfo = res.data.map.pageInfo;
+                    })
+                },
+                // 获取所有部门信息，保存在vue中（depts）
+                getDepts: function () {
+                    axios({
+                        methods: "GET",
+                        url: "[[@{/emp/depts}]]"
+                    }).then(function (res) {
+                        // console.log(res.data.map.depts)
+                        vue.depts = res.data.map.depts;
+                    })
+                },
+                // 点击添加员工按钮，显示模态框
+                addModal: function () {
+                    // 每次显示模态框之前，清空模态框中的内容以及相关样式
+                    $('#addEmpModal form')[0].reset();
+                    $("#inputEmail").parent().removeClass("has-error has-success");
+                    $("#inputEmpName").parent().removeClass("has-error has-success");
+
+                    $('#addEmpModal').modal({
+                        backdrop: "static",
+                    })
+                },
+                // 点击编辑员工按钮，显示模态框
+                editModal: function (empId) {
+                    // 开启模态框
+                    $('#editEmpModal').modal({
+                        backdrop: "static",
+                    });
+
+                    // 获取当前用户的回显信息
+                    axios({
+                        methods: "GET",
+                        url: "[[@{/emp/edit}]]",
+                        params: {
+                            empId: empId
+                        }
+                    }).then(function (res) {
+                        console.log(res.data.map.editEmp);
+                        vue.editEmp = res.data.map.editEmp;
+                        vue.editDept = res.data.map.editEmp.dept;
+                    })
+                },
+                // 校验表单数据
+                validate_form: function () {
+                    var empName = $("#inputEmpName").val();
+                    // 用户名为 汉字+字符 3-12位
+                    var regExpName = /^[\w\u2E80-\u9FFF]{3,12}$/;
+                    if (!regExpName.test(empName)) {
+                        // alert("用户名为 汉字+字符 3-12位！");
+                        $("#inputEmpName").parent().removeClass("has-error has-success");
+                        $("#inputEmpName").next("span").text("")
+
+                        $("#inputEmpName").parent().addClass("has-error");
+                        $("#inputEmpName").next("span").text("用户名需满足3-12位")
+                        return false;
+                    } else {
+                        $("#inputEmpName").parent().removeClass("has-error has-success");
+                        $("#inputEmpName").next("span").text("")
+
+                        $("#inputEmpName").parent().addClass("has-success");
+                        $("#inputEmpName").next("span").text("")
+                    }
+                    var email = $("#inputEmail").val();
+                    // 邮箱格式
+                    var regExpEmail = /^[a-zA-Z0-9_-]+@[a-zA-Z0-9_-]+(\.[a-zA-Z0-9_-]+)+$/;
+                    if (!regExpEmail.test(email)) {
+                        // alert("邮箱格式不正确！")
+                        $("#inputEmail").parent().removeClass("has-error has-success");
+                        $("#inputEmail").next("span").text("")
+
+                        $("#inputEmail").parent().addClass("has-error");
+                        $("#inputEmail").next("span").text("邮箱格式不正确");
+                        return false;
+                    } else {
+                        $("#inputEmail").parent().removeClass("has-error has-success");
+                        $("#inputEmail").next("span").text("")
+
+                        $("#inputEmail").parent().addClass("has-success");
+                        $("#inputEmail").next("span").text("");
+                    }
+                    return true;
+                },
+                // 添加员工信息
+                saveEmp: function () {
+                    if (!this.validate_form()) {
+                        return false;
+                    }
+                    axios({
+                        method: "POST",
+                        url: "[[@{/emp}]]",
+                        data: {
+                            empName: vue.emp.empName,
+                            age: vue.emp.age,
+                            sex: vue.emp.sex,
+                            email: vue.emp.email,
+                            deptId: vue.emp.deptId
+                        }
+                    }).then(function (res) {
+                        // console.log(res.data);
+                        alert(res.data.msg);
+                        // 关闭模态框
+                        $("#addEmpModal").modal('hide');
+                        // 添加完成之后跳转到尾页
+                        vue.getPageInfo(9999);
+                    })
+                },
+                // 编辑员工信息
+                updateEmp: function () {
+                    // 将修改后的员工数据同步到数据库中
+                    axios({
+                        method: "PUT",
+                        url: "[[@{/emp}]]",
+                        data: {
+                            empId: vue.editEmp.empId,
+                            empName: vue.editEmp.empName,
+                            age: vue.editEmp.age,
+                            sex: vue.editEmp.sex,
+                            email: vue.editEmp.email,
+                            deptId: vue.editEmp.deptId
+                        }
+                    }).then(function (res) {
+                        alert(res.data.msg);
+                        // 关闭模态框
+                        $("#editEmpModal").modal('hide');
+                        // 添加完成之后跳转到首页
+                        vue.getPageInfo(1);
+                    })
+                },
+                // 删除单个员工信息
+                deleteEmp: function (empName) {
+                    // 通过comfirm确认框提示用户是否删除？
+                    if (!confirm("是否确认删除<<" + empName + ">>？")) {
+                        return false;
+                    };
+                    axios({
+                        url: "[[@{/emp/}]]" + empName,
+                        method: "DELETE",
+                    }).then(function (res) {
+                        alert(res.data.msg);
+                        // 删除完成之后跳转到首页
+                        vue.getPageInfo(1);
+                    })
+                },
+                // 批量删除员工信息
+                deleteEmpBatch: function () {
+                    var empNames = "";
+
+                    $.each($(".check_item:checked"), function () {
+                        empNames += $(this).parents("tr").find("td:eq(2)").text() + ",";
+                    });
+                    empNames = empNames.substring(0, empNames.length - 1);
+                    if (confirm("确认要删除<<" + empNames + ">>吗？")) {
+                        axios({
+                            url: "[[@{/emp/}]]" + empNames,
+                            method: "DELETE",
+                        }).then(function (res) {
+                            alert(res.data.msg);
+                            // 将选中的复选框取消勾选
+                            $("#check_all").prop("checked", false);
+                            $(".check_item").prop("checked", false);
+
+                            // 删除完成之后跳转到首页
+                            vue.getPageInfo(1);
+                        })
+                    }
+                },
+
+                // 全选框功能
+                checkAll: function () {
+                    // 查看当前全选框是否为选中状态（选中为true，否则为false）
+                    var flag = $("#check_all").prop("checked");
+                    // 如果全选框为选中状态，那么其他单选框都要选中
+                    $(".check_item").prop("checked", flag);
+                },
+                // 单选框功能
+                checkItem: function (empId) {
+                    // console.log(empId);
+                    // vue.batchDeleteId.push(empId);
+                    // console.log(vue.batchDeleteId);
+                    // 判断当前页面的单选框是否全部被选中（true-全选框就要被选中）
+                    var flag = $(".check_item:checked").length == $(".check_item").length;
+                    if (flag) {
+                        $("#check_all").prop("checked", flag);
+                    }
+                }
+            },
+            // 挂载之后执行
+            mounted: function () {
+                this.getAllInfo();
+                this.getDepts();
+            }
+        });
+    }
+
+</script>
+</body>
+</html>

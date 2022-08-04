@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE configuration
+        PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-config.dtd">
+
+<configuration>
+    <!--引入jdbc配置文件-->
+    <properties resource="jdbc.properties"/>
+
+<!--    &lt;!&ndash; 将实体类中的属性以驼峰命名的形式与数据库中字段对应 &ndash;&gt;-->
+<!--    <settings>-->
+<!--        <setting name="mapUnderscoreToCameCase" value="true"/>-->
+<!--    </settings>-->
+
+    <!--配置pojo实体类的别名-->
+    <typeAliases>
+        <!--以包为单位，该包下的所有类都设置为默认别名 且 不区分大小写-->
+        <package name="com.pojo"/>
+    </typeAliases>
+
+    <plugins>
+        <!--设置分页插件-->
+        <plugin interceptor="com.github.pagehelper.PageInterceptor">
+            <property name="reasonable" value="true"/>
+        </plugin>
+    </plugins>
+
+    <!--引入映射文件-->
+    <mappers>
+        <package name="com.mapper"/>
+    </mappers>
+</configuration>

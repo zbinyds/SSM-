@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:mvc="http://www.springframework.org/schema/mvc"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/context https://www.springframework.org/schema/context/spring-context.xsd http://www.springframework.org/schema/mvc https://www.springframework.org/schema/mvc/spring-mvc.xsd">
+
+    <!-- 开启组件扫描 -->
+    <context:component-scan base-package="com.controller"/>
+
+    <!-- 配置Thymeleaf视图解析器 -->
+    <bean id="viewResolver" class="org.thymeleaf.spring5.view.ThymeleafViewResolver">
+        <property name="order" value="1"/>
+        <property name="characterEncoding" value="UTF-8"/>
+        <property name="templateEngine">
+            <bean class="org.thymeleaf.spring5.SpringTemplateEngine">
+                <property name="templateResolver">
+                    <bean class="org.thymeleaf.spring5.templateresolver.SpringResourceTemplateResolver">
+                        <!-- 视图前缀 -->
+                        <property name="prefix" value="/WEB-INF/templates/"/>
+                        <!-- 视图后缀 -->
+                        <property name="suffix" value=".html"/>
+                        <property name="templateMode" value="HTML5"/>
+                        <property name="characterEncoding" value="UTF-8"/>
+                    </bean>
+                </property>
+            </bean>
+        </property>
+    </bean>
+
+    <!-- 配置默认的servlet处理静态资源 -->
+    <mvc:default-servlet-handler />
+    <!-- 开启springMVC注解驱动 -->
+    <mvc:annotation-driven />
+
+    <!--
+        设置视图处理器（用于处理那些只进行跳转页面，不进行请求处理的请求。例如首页）
+        path：设置处理的请求地址
+        view-name：设置请求地址所对应的视图名称（逻辑视图）
+    -->
+    <mvc:view-controller path="/" view-name="index"/>
+    <mvc:view-controller path="/empListByVue" view-name="empList1"/>
+
+<!--    &lt;!&ndash; 配置拦截器 &ndash;&gt;-->
+<!--    <mvc:interceptors>-->
+<!--        <bean class="com.interceptor.TestInterceptor"/>-->
+<!--    </mvc:interceptors>-->
+
+<!--        &lt;!&ndash; 配置异常处理解析器 &ndash;&gt;-->
+<!--        <bean class="org.springframework.web.servlet.handler.SimpleMappingExceptionResolver">-->
+<!--            &lt;!&ndash; 设置异常的类型，以及出现了该异常的解决方法 &ndash;&gt;-->
+<!--            <property name="exceptionMappings">-->
+<!--                <props>-->
+<!--                    &lt;!&ndash; 如果发生了ArithmeticException异常，跳转到error.html页面上 &ndash;&gt;-->
+<!--                    <prop key="java.lang.ArithmeticException">error</prop>-->
+<!--                </props>-->
+<!--            </property>-->
+<!--            &lt;!&ndash; 设置共享在请求域中的属性名，可以用来获取具体的异常信息，然后将其渲染到页面上 &ndash;&gt;-->
+<!--            <property name="exceptionAttribute" value="ex"/>-->
+<!--        </bean>-->
+
+</beans>
